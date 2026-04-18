@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.airtel.voucher">
+
+    <!-- ── Permissions ─────────────────────────────────────────────────── -->
+
+    <!--
+        RECEIVE_SMS: Required for the BroadcastReceiver to receive incoming SMS.
+        READ_SMS: Required to read SMS message bodies on some devices/versions.
+        INTERNET: Required for WorkManager to call the backend API.
+
+        Runtime permission request for RECEIVE_SMS and READ_SMS must be handled
+        in your main Activity before the receiver can function reliably.
+    -->
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!--
+        RECEIVE_BOOT_COMPLETED: Allows WorkManager to reschedule pending jobs
+        after device reboot — critical for payment delivery resilience.
+    -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!--
+        FOREGROUND_SERVICE: Required for WorkManager on Android 12+ to run
+        expedited tasks in certain conditions.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+
+    <application
+        android:name=".VoucherApp"
+        android:allowBackup="false"
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme"
+        android:networkSecurityConfig="@xml/network_security_config">
+
+        <!-- ── Main Activity ────────────────────────────────────────────── -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
+            SMS Receiver
+            ─────────────────────────────────────────────────────────────────
+            android:exported="false" → only the system can deliver SMS broadcasts.
+            android:priority="999"   → process before other apps (max is 1000).
+
+            SMS_RECEIVED is one of the few protected broadcasts exempt from the
+            Android 8+ implicit broadcast restriction — it is still delivered to
+            manifest-registered receivers.
+        -->
+        <receiver
+            android:name=".receiver.SmsReceiver"
+            android:exported="false"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="999">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
+        <!--
+            WorkManager initialization provider.
+            If you use a custom WorkManager config (recommended for production),
+            disable the default initializer and initialize manually in VoucherApp.
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
+    </application>
+
+</manifest>

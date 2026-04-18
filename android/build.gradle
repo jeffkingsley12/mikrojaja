@@ -1,0 +1,83 @@
+plugins {
+    id 'com.android.application'
+}
+
+// Load secrets from local.properties (NEVER commit these to git)
+def localProps = new Properties()
+def localPropsFile = rootProject.file('local.properties')
+if (localPropsFile.exists()) {
+    localPropsFile.withInputStream { localProps.load(it) }
+}
+
+android {
+    compileSdk 34
+    namespace 'com.airtel.voucher'
+
+    defaultConfig {
+        applicationId "com.airtel.voucher"
+        minSdk 21            // Android 5.0 — covers ~99% of active devices
+        targetSdk 34
+        versionCode 1
+        versionName "1.0.0"
+
+        // Inject secrets as BuildConfig fields (not in source control)
+        buildConfigField "String", "API_BASE_URL",
+            "\"${localProps.getProperty('API_BASE_URL', 'http://localhost:3000')}\""
+        buildConfigField "String", "API_SECRET",
+            "\"${localProps.getProperty('API_SECRET', 'REPLACE_ME')}\""
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // Signing config should be configured here for production builds
+        }
+        debug {
+            applicationIdSuffix ".debug"
+            debuggable true
+        }
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    // Ensure APK is not debuggable in release builds
+    packagingOptions {
+        resources {
+            excludes += ['/META-INF/*.kotlin_module']
+        }
+    }
+}
+
+dependencies {
+    // ── WorkManager — persistent background job scheduling ───────────────
+    implementation 'androidx.work:work-runtime:2.9.0'
+
+    // ── Room — local SQLite ORM for offline payment queue ────────────────
+    def room_version = '2.6.1'
+    implementation "androidx.room:room-runtime:$room_version"
+    annotationProcessor "androidx.room:room-compiler:$room_version"
+
+    // ── OkHttp — HTTP client ─────────────────────────────────────────────
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+
+    // ── AndroidX Core ────────────────────────────────────────────────────
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'androidx.core:core:1.12.0'
+
+    // ── Startup — WorkManager manual init ────────────────────────────────
+    implementation 'androidx.startup:startup-runtime:1.1.1'
+
+    // ── Testing ──────────────────────────────────────────────────────────
+    testImplementation 'junit:junit:4.13.2'
+    androidTestImplementation 'androidx.test.ext:junit:1.1.5'
+    androidTestImplementation 'androidx.work:work-testing:2.9.0'
+}
